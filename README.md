@@ -1,54 +1,78 @@
-# .
+# Moikatsu
 
-This template should help get you started developing with Vue 3 in Vite.
+Self-hosted, open-source AI character chat. Supports Character Card V1/V2/V3 (PNG, JSON, CharX), Chat Completion presets, lorebooks, and JSONL chats. Uses OpenRouter for models.
 
-## Recommended IDE Setup
+> Early development.
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Requirements
 
-## Recommended Browser Setup
+- [Node.js](https://nodejs.org/) 22.18+ or 24.12+
+- [Bun](https://bun.sh/) (package manager)
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
+## Install and run
 
 ```sh
+git clone <repo-url> moikatsu
+cd moikatsu
 bun install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
-bun dev
-```
-
-### Type-Check, Compile and Minify for Production
-
-```sh
 bun run build
+bun run start
 ```
 
-### Run Unit Tests with [Vitest](https://vitest.dev/)
+Open http://127.0.0.1:8100.
+
+On first start Moikatsu creates `config.yaml` and the `data/` folder.
+
+## Configuration
+
+Edit `config.yaml`, then restart. Defaults are documented in [`default/config.yaml`](./default/config.yaml).
+
+| Key         | Default            | Description                                                   |
+| ----------- | ------------------ | ------------------------------------------------------------- |
+| `dataRoot`  | `./data`           | Folder for all your data.                                     |
+| `listen`    | `false`            | `true` lets other devices on your network connect.            |
+| `port`      | `8100`             | Server port.                                                  |
+| `whitelist` | `127.0.0.1`, `::1` | IPs or CIDR ranges allowed to connect. Empty allows everyone. |
+| `basicAuth` | disabled           | Username and password prompt.                                 |
+| `maxBodyMB` | `100`              | Largest accepted upload.                                      |
+
+To use Moikatsu from your phone on the same network: set `listen: true` and add your network to `whitelist` (e.g. `192.168.1.0/24`) or enable `basicAuth`. The server refuses to listen on the network without one of them.
+
+## Your data
+
+Everything is stored as plain files in `data/`:
+
+```
+data/
+  settings.json     settings
+  secrets.json      API keys (encrypted)
+  characters/       character cards (.png)
+  chats/            chats per character (.jsonl)
+  group-chats/      group chats (.jsonl)
+  groups/           groups (.json)
+  lorebooks/        lorebooks (.json)
+  presets/          Chat Completion presets (.json)
+  personas/         persona avatars
+  quick-replies/    Quick Reply sets (.json)
+  backups/          automatic backups
+```
+
+To back up, copy the `data/` folder.
+
+API keys in `secrets.json` are encrypted with `secret.key`, which lives in the Moikatsu folder, not in `data/`. A copied or shared data folder doesn't expose your keys. If `secret.key` is lost, enter your API key again.
+
+## Development
 
 ```sh
-bun test:unit
+bun run dev         # server (auto-restart) + Vite at http://localhost:5173
+bun run test:unit   # tests
+bun run type-check
+bun run lint         # oxlint + ESLint, with fixes
+bun run format       # oxfmt
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+The server (`server/`) and the engine (`engine/`) run TypeScript directly with Node's type stripping, so they use erasable syntax only (no enums, namespaces, or parameter properties) and relative imports with `.ts` extensions. The engine is also bundled into the UI, so it can't use Node or browser-only APIs.
 
-```sh
-bun lint
-```
+## License
+
+[AGPL-3.0](./LICENSE)
