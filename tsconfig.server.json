@@ -1,0 +1,16 @@
+// Server and engine code run directly in Node.js via native type-stripping, so only erasable TypeScript syntax is allowed.
+// The engine is also bundled into the browser app, so it must not use Node.js or DOM APIs.
+{
+  "extends": "@tsconfig/node24/tsconfig.json",
+  "include": ["server/**/*", "engine/**/*"],
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.server.tsbuildinfo"
+  }
+}
