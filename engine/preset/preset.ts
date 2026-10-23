@@ -59,6 +59,31 @@ const LEGACY_PROMPT_KEYS: Array<[string, string]> = [
   ['jailbreak_prompt', 'jailbreak'],
 ]
 
+/** Proxy and endpoint fields that can leak credentials or redirect requests. */
+export const SENSITIVE_PRESET_FIELDS = [
+  'reverse_proxy',
+  'proxy_password',
+  'custom_url',
+  'custom_include_body',
+  'custom_exclude_body',
+  'custom_include_headers',
+  'vertexai_region',
+  'vertexai_express_project_id',
+  'azure_base_url',
+  'azure_deployment_name',
+  'workers_ai_account_id',
+] as const
+
+/** Sensitive fields that are set; ask before importing or exporting a preset that has any. */
+export const sensitivePresetFields = (raw: RawPreset) =>
+  SENSITIVE_PRESET_FIELDS.filter((field) => raw[field])
+
+export function withoutSensitiveFields(raw: RawPreset): RawPreset {
+  const copy = { ...raw }
+  for (const field of SENSITIVE_PRESET_FIELDS) delete copy[field]
+  return copy
+}
+
 /** Migrates renamed and legacy keys. Returns a new object. */
 export function migratePreset(raw: RawPreset): RawPreset {
   const preset: RawPreset = structuredClone(raw)
