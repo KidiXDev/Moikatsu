@@ -1,5 +1,12 @@
 import type { Preset } from './preset/preset.ts'
 import type { OutputMessage } from './prompt/completion.ts'
+import {
+  cacheAtDepth,
+  cacheSystemPrompt,
+  postProcessPrompt,
+  type PromptNames,
+} from './prompt/postprocess.ts'
+import type { CacheSettings } from './settings.ts'
 import type { GenerationType } from './types.ts'
 
 export const OPENROUTER_API = 'https://openrouter.ai/api/v1'
@@ -40,6 +47,11 @@ export interface RequestOptions {
   type: GenerationType
   stop: string[]
   jsonSchema?: JsonSchema
+  /** For prompt post-processing; without it the messages are sent as built. */
+  names?: PromptNames
+  model?: OpenRouterModel
+  caching?: CacheSettings
+  logitBias?: Record<string, number>
 }
 
 /** The model id sent to OpenRouter, or null to use the account default. */
@@ -68,13 +80,21 @@ function reasoningEffort(preset: Preset): string | undefined {
 /** OpenRouter request body from a preset and the built messages. */
 export function buildRequestBody({
   preset,
-  messages,
+  messages: built,
   type,
   stop,
   jsonSchema,
+  names,
+  model: info,
+  caching,
+  logitBias,
 }: RequestOptions): Record<string, unknown> {
   const model = modelId(preset)
   const effort = reasoningEffort(preset)
+  let messages = names
+    ? postProcessPrompt(built, preset.custom_prompt_post_processing, names)
+    : built
+  if (caching && model) messages = applyCaching(messages, model, caching, info)
   const body: Record<string, unknown> = {
     ...(model ? { model } : {}),
     messages,
@@ -96,6 +116,7 @@ export function buildRequestBody({
   const stopStrings = stop.filter(Boolean).slice(0, MAX_STOP_STRINGS)
   if (stopStrings.length) body.stop = stopStrings
   if (Number(preset.seed) >= 0) body.seed = Number(preset.seed)
+  if (logitBias) body.logit_bias = logitBias
   if (preset.openrouter_middleout === 'on') body.transforms = ['middle-out']
   else if (preset.openrouter_middleout === 'off') body.transforms = []
 
@@ -124,6 +145,24 @@ export function buildRequestBody({
 
   applyModelQuirks(body, model ?? '')
   return body
+}
+
+function applyCaching(
+  messages: OutputMessage[],
+  model: string,
+  caching: CacheSettings,
+  info: OpenRouterModel | undefined,
+): OutputMessage[] {
+  const claude =
+    model.startsWith('anthropic/claude') && (caching.systemPrompt || caching.atDepth >= 0)
+  const gemini =
+    caching.gemini && /google\/gemini/.test(model) && Boolean(info?.pricing?.input_cache_write)
+  if (!claude && !gemini) return messages
+  const copy = structuredClone(messages)
+  if (claude && caching.systemPrompt) cacheSystemPrompt(copy, caching.ttl)
+  if (claude && caching.atDepth >= 0) cacheAtDepth(copy, caching.atDepth, caching.ttl)
+  if (gemini) cacheSystemPrompt(copy)
+  return copy
 }
 
 const drop = (body: Record<string, unknown>, ...keys: string[]) =>

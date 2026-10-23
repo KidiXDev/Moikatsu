@@ -27,6 +27,21 @@ export interface GuidanceSettings {
   role: number
 }
 
+export interface CacheSettings {
+  /** Cache the first system message (Claude; Gemini when `gemini` is on). */
+  systemPrompt: boolean
+  /** Claude cache breakpoint depth in role switches; -1 disables it. */
+  atDepth: number
+  ttl: '5m' | '1h'
+  gemini: boolean
+}
+
+export interface LogitBiasEntry {
+  /** Text to tokenize, or a JSON array of token ids. */
+  text: string
+  value: number
+}
+
 export interface EngineSettings {
   preferCharacterPrompt: boolean
   preferCharacterJailbreak: boolean
@@ -46,6 +61,9 @@ export interface EngineSettings {
   reasoning: ReasoningSettings
   authorsNote: AuthorsNoteSettings
   guidance: GuidanceSettings
+  caching: CacheSettings
+  /** Named bias lists; a preset picks one with `bias_preset_selected`. */
+  logitBiasPresets: Record<string, LogitBiasEntry[]>
 }
 
 export const ENGINE_DEFAULTS: EngineSettings = {
@@ -78,6 +96,8 @@ export const ENGINE_DEFAULTS: EngineSettings = {
     depth: 0,
     role: 0,
   },
+  caching: { systemPrompt: false, atDepth: -1, ttl: '5m', gemini: false },
+  logitBiasPresets: {},
 }
 
 /** Merges stored settings over defaults, one level deep for nested groups. */
@@ -90,5 +110,6 @@ export function resolveEngineSettings(stored: Partial<EngineSettings> | undefine
     reasoning: { ...ENGINE_DEFAULTS.reasoning, ...s.reasoning },
     authorsNote: { ...ENGINE_DEFAULTS.authorsNote, ...s.authorsNote },
     guidance: { ...ENGINE_DEFAULTS.guidance, ...s.guidance },
+    caching: { ...ENGINE_DEFAULTS.caching, ...s.caching },
   }
 }

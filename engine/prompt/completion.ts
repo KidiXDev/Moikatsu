@@ -1,8 +1,13 @@
 import type { TokenCounter } from '../tokenizer.ts'
 
+export interface CacheControl {
+  type: 'ephemeral'
+  ttl?: string
+}
+
 export type ContentPart =
-  | { type: 'text'; text: string }
-  | { type: 'image_url'; image_url: { url: string; detail: string } }
+  | { type: 'text'; text: string; cache_control?: CacheControl }
+  | { type: 'image_url'; image_url: { url: string; detail: string }; cache_control?: CacheControl }
 
 export interface PromptMessage {
   identifier: string
