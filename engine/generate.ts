@@ -6,6 +6,7 @@ import {
   resolveStopStrings,
   timestamp,
 } from './chat.ts'
+import { groupDepthPrompts, groupNames, joinGroupCards, type GroupContext } from './group.ts'
 import { evaluateMacros, type MacroEnv } from './macros/index.ts'
 import type { VariableStore } from './macros/variables.ts'
 import { buildRequestBody, modelId, supportsImages, type OpenRouterModel } from './openrouter.ts'
@@ -26,7 +27,7 @@ import {
   type RegexSubstitute,
 } from './regex.ts'
 import type { EngineSettings } from './settings.ts'
-import type { TokenCounter } from './tokenizer.ts'
+import { getLogitBias, type TokenCounter } from './tokenizer.ts'
 import { formatTrackerState, getTrackerConfig, readTrackerValues } from './tracker.ts'
 import {
   PERSONA_POSITION,
@@ -73,6 +74,10 @@ export interface GenerationInput {
   random?: () => number
   /** Counts tokens and builds the prompt without changing World Info timers. */
   dryRun?: boolean
+  /** Group chat: `character` is the member who speaks. */
+  group?: GroupContext
+  /** Attachment URL to its content: text for files, a data URL for images. */
+  attachments?: Record<string, string>
 }
 
 export interface PreparedGeneration {
@@ -92,12 +97,15 @@ const ROLE_INDEX: Record<string, number> = { system: 0, user: 1, assistant: 2 }
 function createEnvironment(input: GenerationInput): MacroEnv {
   const { preset, chat } = input
   const name = input.character.data.name
+  const names = input.group ? groupNames(input.group) : null
   return {
     user: input.userName,
     char: name,
-    group: name,
-    groupNotMuted: name,
-    notChar: input.userName,
+    group: names ? names.all.join(', ') : name,
+    groupNotMuted: names ? names.active.join(', ') : name,
+    notChar: names
+      ? [...names.all.filter((n) => n !== name), input.userName].join(', ')
+      : input.userName,
     character: {},
     model: modelId(preset) ?? '',
     chat: chat.messages,
@@ -121,6 +129,8 @@ export interface MacroContext {
   regexSubstitute: RegexSubstitute
   /** Card-field substitution (macros without card fields, newline collapse, no `\r`). */
   baseChatReplace: (value: string | undefined) => string
+  /** `baseChatReplace` with `{{char}}` set to another character. */
+  replaceAs: (value: string, charName: string) => string
   fields: {
     persona: string
     system: string
@@ -140,13 +150,14 @@ export function createMacroContext(input: GenerationInput): MacroContext {
   const card = input.character.data
   const metadata = chat.metadata
   const env = createEnvironment(input)
-  const plain = (text: string) => evaluateMacros(text, env)
-  const baseChatReplace = (value: string | undefined) => {
+  const replace = (value: string | undefined, macroEnv: MacroEnv) => {
     if (!value) return ''
-    let result = plain(value)
+    let result = evaluateMacros(value, macroEnv)
     if (settings.collapseNewlines) result = result.replaceAll(/\n+/g, '\n')
     return result.replace(/\r/g, '')
   }
+  const baseChatReplace = (value: string | undefined) => replace(value, env)
+  const replaceAs = (value: string, charName: string) => replace(value, { ...env, char: charName })
 
   const fields = {
     persona: baseChatReplace(input.persona?.description?.trim()),
@@ -163,6 +174,14 @@ export function createMacroContext(input: GenerationInput): MacroContext {
     depthPrompt: baseChatReplace(card.extensions.depth_prompt?.prompt?.trim()),
     creatorNotes: baseChatReplace(card.creator_notes.trim()),
   }
+
+  const joined = input.group
+    ? joinGroupCards(input.group, input.characterId, replaceAs, {
+        scenario: baseChatReplace(String(metadata.scenario ?? '').trim()),
+        mesExamples: baseChatReplace(String(metadata.mes_example ?? '').trim()),
+      })
+    : null
+  if (joined) Object.assign(fields, joined)
 
   env.character = {
     description: fields.description,
@@ -199,7 +218,7 @@ export function createMacroContext(input: GenerationInput): MacroContext {
       ...(options.charName ? { char: options.charName } : {}),
     })
 
-  return { env, substitute, regexSubstitute, baseChatReplace, fields }
+  return { env, substitute, regexSubstitute, baseChatReplace, replaceAs, fields }
 }
 
 /** Everything up to the OpenRouter request. */
@@ -220,7 +239,8 @@ export function prepareGeneration(input: GenerationInput): PreparedGeneration {
     extensionPrompts[key] = { value, position, depth, scan, role }
   }
 
-  const { env, substitute, regexSubstitute, baseChatReplace, fields } = createMacroContext(input)
+  const { env, substitute, regexSubstitute, baseChatReplace, replaceAs, fields } =
+    createMacroContext(input)
   const {
     persona,
     system,
@@ -236,16 +256,30 @@ export function prepareGeneration(input: GenerationInput): PreparedGeneration {
   const applyRegex = (text: string, placement: number, options: RegexOptions) =>
     applyRegexScripts(text, placement, input.regexScripts, regexSubstitute, options)
 
-  // Character's note (depth prompt).
-  const depth = card.extensions.depth_prompt
-  setPrompt(
-    'DEPTH_PROMPT',
-    depthPrompt,
-    EXTENSION_PROMPT_POSITION.IN_CHAT,
-    depth?.depth ?? 4,
-    settings.authorsNote.allowWIScan,
-    ROLE_INDEX[depth?.role ?? 'system'] ?? 0,
+  // Character's note (depth prompt); join-mode groups use every member's.
+  const memberNotes = input.group
+    ? groupDepthPrompts(input.group, input.characterId, replaceAs)
+    : []
+  memberNotes.forEach((note, i) =>
+    setPrompt(
+      `DEPTH_PROMPT_${i}`,
+      note.text,
+      EXTENSION_PROMPT_POSITION.IN_CHAT,
+      note.depth,
+      settings.authorsNote.allowWIScan,
+      ROLE_INDEX[note.role] ?? 0,
+    ),
   )
+  const depth = card.extensions.depth_prompt
+  if (!memberNotes.length)
+    setPrompt(
+      'DEPTH_PROMPT',
+      depthPrompt,
+      EXTENSION_PROMPT_POSITION.IN_CHAT,
+      depth?.depth ?? 4,
+      settings.authorsNote.allowWIScan,
+      ROLE_INDEX[depth?.role ?? 'system'] ?? 0,
+    )
 
   // The greeting reacts to persona/character changes until the chat moves on.
   const first = chat.messages[0]
@@ -253,21 +287,37 @@ export function prepareGeneration(input: GenerationInput): PreparedGeneration {
 
   let core = chat.messages.filter((m) => !m.is_system)
   if (type === 'swipe') core = core.slice(0, -1)
-  core = core.map((message, index) => ({
-    ...message,
-    mes: applyRegex(
+  const attachments = input.attachments ?? {}
+  core = core.map((message, index) => {
+    const regexed = applyRegex(
       message.mes,
       message.is_user ? REGEX_PLACEMENT.USER_INPUT : REGEX_PLACEMENT.AI_OUTPUT,
       {
         isPrompt: true,
         depth: core.length - index - (isContinue ? 2 : 1),
       },
-    ),
-  }))
+    )
+    const extra = message.extra
+    const files = (extra?.files ?? [])
+      .map((file) => file.text || attachments[file.url] || '')
+      .filter(Boolean)
+    return {
+      ...message,
+      mes: files.length ? `${files.join('\n\n')}\n\n${regexed}` : regexed,
+      extra: extra?.media?.length
+        ? {
+            ...extra,
+            media: extra.media.map((m) => ({ ...m, url: attachments[m.url] ?? m.url })),
+          }
+        : extra,
+    }
+  })
 
   const promptReasoning = new PromptReasoning(settings.reasoning, plain)
   for (let i = core.length - 1; i >= 0; i--) {
     const message = core[i]!
+    // Group chats only re-send the speaker's own reasoning.
+    if (input.group && message.name !== card.name) continue
     const messageDepth = core.length - i - (isContinue ? 2 : 1)
     const reasoning = applyRegex(
       String(message.extra?.reasoning ?? ''),
@@ -436,10 +486,12 @@ export function prepareGeneration(input: GenerationInput): PreparedGeneration {
   const promptBias = substitute(
     getPromptBias(chat.messages, type, input.input ?? '', settings.userPromptBias),
   )
+  const isGroup = Boolean(input.group)
+  const memberNames = input.group ? groupNames(input.group).all : []
   const built = buildChatCompletion({
     preset,
     type,
-    isGroup: false,
+    isGroup,
     groupMembers: [],
     charDescription: description,
     charPersonality: personality,
@@ -454,14 +506,14 @@ export function prepareGeneration(input: GenerationInput): PreparedGeneration {
     extensionPrompts,
     messages: toHistoryMessages(core, {
       namesBehavior: preset.names_behavior,
-      isGroup: false,
+      isGroup,
       userName: input.userName,
     }),
     messageExamples: parseExampleBlocks(exampleBlocks, {
       userName: input.userName,
       charName: card.name,
-      groupNames: [],
-      isGroup: false,
+      groupNames: memberNames,
+      isGroup,
     }),
     cyclePrompt,
     pinExamples: settings.pinExamples,
@@ -474,8 +526,21 @@ export function prepareGeneration(input: GenerationInput): PreparedGeneration {
     settings.stopStrings,
     settings.stopStringsMacros ? plain : null,
   )
+  const body = buildRequestBody({
+    preset,
+    messages: built.messages,
+    type,
+    stop: stopStrings,
+    names: { charName: card.name, userName: input.userName, groupNames: memberNames },
+    model: input.model,
+    caching: settings.caching,
+    logitBias: getLogitBias(
+      settings.logitBiasPresets[preset.bias_preset_selected],
+      modelId(preset),
+    ),
+  })
   return {
-    body: buildRequestBody({ preset, messages: built.messages, type, stop: stopStrings }),
+    body,
     messages: built.messages,
     tokenBreakdown: built.tokenBreakdown,
     worldInfo: wi.activated,
@@ -495,7 +560,10 @@ export interface ReplyResult {
 /** Cleans a finished reply: reasoning auto-parse, stop strings, regex, name trimming (cleanUpMessage). */
 export function finishReply(
   prepared: PreparedGeneration,
-  input: Pick<GenerationInput, 'type' | 'settings' | 'userName' | 'character' | 'regexScripts'>,
+  input: Pick<
+    GenerationInput,
+    'type' | 'settings' | 'userName' | 'character' | 'regexScripts' | 'group'
+  >,
   raw: { text: string; reasoning: string },
 ): ReplyResult {
   const { settings } = input
@@ -519,7 +587,9 @@ export function finishReply(
     stopStrings: prepared.stopStrings,
     userName: input.userName,
     charName: input.character.data.name,
-    otherMemberNames: [],
+    otherMemberNames: input.group
+      ? groupNames(input.group).all.filter((name) => name !== input.character.data.name)
+      : [],
     collapseNewlines: settings.collapseNewlines,
     autoFixMarkdown: settings.autoFixMarkdown,
     allowName1Display: settings.allowName1Display,

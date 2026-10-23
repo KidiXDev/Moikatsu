@@ -38,6 +38,15 @@ export function chatToText(chat: Chat): string {
     .join('\n\n')
 }
 
+export function chatToMarkdown(chat: Chat): string {
+  const title = typeof chat.metadata.title === 'string' ? `# ${chat.metadata.title}\n\n` : ''
+  const body = chat.messages
+    .filter((m) => !m.is_system)
+    .map((m) => `### ${m.name}\n\n${m.mes}`)
+    .join('\n\n')
+  return `${title}${body}\n`
+}
+
 /** New chat greeting: first message plus alternate greetings as swipes. Macros stay unexpanded. */
 export function createGreeting(
   name: string,

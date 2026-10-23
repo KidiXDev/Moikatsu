@@ -100,6 +100,16 @@ export interface MediaAttachment {
   [key: string]: unknown
 }
 
+export interface FileAttachment {
+  url: string
+  name?: string
+  size?: number
+  created?: number
+  /** Inline text, used instead of fetching `url`. */
+  text?: string
+  [key: string]: unknown
+}
+
 export interface MessageExtra {
   api?: string
   model?: string
@@ -114,6 +124,7 @@ export interface MessageExtra {
   media?: MediaAttachment[]
   media_display?: string
   media_index?: number
+  files?: FileAttachment[]
   [key: string]: unknown
 }
 
@@ -168,6 +179,27 @@ export interface TimedEffect {
 export interface Chat {
   metadata: ChatMetadata
   messages: ChatMessage[]
+}
+
+export interface Group {
+  id: string
+  name: string
+  avatar_url?: string
+  /** Character avatar file names (`<character id>.png`). */
+  members: string[]
+  disabled_members: string[]
+  chat_id: string
+  chats: string[]
+  activation_strategy: number
+  generation_mode: number
+  /** `<FIELDNAME>` and macros are replaced per member. */
+  generation_mode_join_prefix?: string
+  generation_mode_join_suffix?: string
+  allow_self_responses?: boolean
+  /** Seconds between auto-mode replies. */
+  auto_mode_delay?: number
+  fav?: boolean
+  [key: string]: unknown
 }
 
 // World Info
