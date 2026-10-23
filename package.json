@@ -9,6 +9,7 @@
     "dev:server": "node --watch server/index.ts",
     "dev:web": "vite",
     "start": "node server/index.ts",
+    "import-data": "node server/import-cli.ts",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "test:unit": "vitest",
