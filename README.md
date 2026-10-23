@@ -54,10 +54,21 @@ data/
   presets/          Chat Completion presets (.json)
   personas/         persona avatars
   quick-replies/    Quick Reply sets (.json)
-  backups/          automatic backups
+  media/            uploaded images and text attachments
+  prompts/          the prompt sent for each reply (last 50 per chat)
+  backups/          chat history snapshots, daily settings copies
+  trash/            deleted characters, groups, and chats (kept 30 days)
 ```
 
-To back up, copy the `data/` folder.
+To back up, copy the `data/` folder, or download a zip from `GET /api/backup` (API keys are left out). Upload that zip to `POST /api/backup` to restore it; the current data is saved to `backups/` first.
+
+### Importing an existing data folder
+
+```sh
+bun run import-data /path/to/user/data
+```
+
+Copies characters, chats, group chats, groups, lorebooks (`worlds/`), presets (`OpenAI Settings/`), persona avatars (`User Avatars/`), and Quick Reply sets (`QuickReplies/`), and converts personas, World Info, regex, and Author's Note settings from its `settings.json`. Files that already exist are kept.
 
 API keys in `secrets.json` are encrypted with `secret.key`, which lives in the Moikatsu folder, not in `data/`. A copied or shared data folder doesn't expose your keys. If `secret.key` is lost, enter your API key again.
 
