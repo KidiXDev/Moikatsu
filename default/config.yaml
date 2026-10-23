@@ -1,0 +1,28 @@
+# Moikatsu server configuration.
+# Copied to ./config.yaml on first start. Edit that file, then restart the server.
+
+# Folder for all user data (characters, chats, lorebooks, presets, settings, API keys).
+# Relative paths are resolved from the Moikatsu folder.
+dataRoot: ./data
+
+# false: only this computer can connect (127.0.0.1).
+# true: other devices on your network can connect (0.0.0.0).
+# Listening on the network requires a whitelist or basicAuth.
+listen: false
+
+port: 8100
+
+# IP addresses or CIDR ranges allowed to connect. Empty list allows everyone.
+# Example for a home network: 192.168.1.0/24
+whitelist:
+  - 127.0.0.1
+  - ::1
+
+# Ask for a username and password. Recommended when listen is true.
+basicAuth:
+  enabled: false
+  username: ''
+  password: ''
+
+# Largest accepted upload (card, chat, backup), in megabytes.
+maxBodyMB: 100
