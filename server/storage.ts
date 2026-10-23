@@ -67,7 +67,10 @@ export function getDataPaths(root: string) {
     presets: path.join(root, 'presets'),
     personas: path.join(root, 'personas'),
     quickReplies: path.join(root, 'quick-replies'),
+    media: path.join(root, 'media'),
+    prompts: path.join(root, 'prompts'),
     backups: path.join(root, 'backups'),
+    trash: path.join(root, 'trash'),
   }
 }
 
