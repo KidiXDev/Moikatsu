@@ -37,3 +37,12 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# Moikatsu runtime
+/config.yaml
+/data/
+/secret.key
+
+# Local planning docs
+/PRD.md
+/NOTES.md

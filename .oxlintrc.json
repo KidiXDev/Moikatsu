@@ -4,7 +4,36 @@
   "env": {
     "browser": true
   },
+  "ignorePatterns": ["dist", "coverage"],
   "categories": {
-    "correctness": "error"
-  }
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "typescript/no-explicit-any": "error",
+    "typescript/ban-ts-comment": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-empty-object-type": "error",
+    "typescript/no-unsafe-function-type": "error",
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "destructuredArrayIgnorePattern": "^_",
+        "caughtErrors": "none"
+      }
+    ],
+    "eqeqeq": "error",
+    "prefer-const": "error",
+    "no-var": "error"
+  },
+  "overrides": [
+    {
+      "files": ["server/**", "engine/**", "*.config.ts"],
+      "env": {
+        "node": true
+      }
+    }
+  ]
 }
