@@ -109,7 +109,14 @@ describe('chat flow', () => {
   it('sends a message and streams the reply', async () => {
     replies.push(['Hello ', 'there.'])
     const events = await generate(chatUrl, { type: 'normal', input: 'Hi!' })
-    expect(events.map((e) => e.event)).toEqual(['start', 'reasoning', 'text', 'text', 'done'])
+    expect(events.map((e) => e.event)).toEqual([
+      'start',
+      'worldInfo',
+      'reasoning',
+      'text',
+      'text',
+      'done',
+    ])
     expect(events.at(-1)?.data.message).toMatchObject({
       name: 'Mira',
       mes: 'Hello there.',

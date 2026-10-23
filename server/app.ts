@@ -13,13 +13,19 @@ import { secureHeaders } from 'hono/secure-headers'
 
 import { projectRoot, type Config } from './config.ts'
 import { createLibrary } from './library.ts'
+import { backupRoutes } from './routes/backup.ts'
 import { charactersRoutes } from './routes/characters.ts'
+import { chatIndexRoutes } from './routes/chat-index.ts'
 import { chatsRoutes } from './routes/chats.ts'
 import { collectionRoutes } from './routes/collections.ts'
+import { groupsRoutes } from './routes/groups.ts'
+import { mediaRoutes } from './routes/media.ts'
 import { openrouterRoutes } from './routes/openrouter.ts'
 import { personasRoutes } from './routes/personas.ts'
+import { profilesRoutes } from './routes/profiles.ts'
 import { secretsRoutes } from './routes/secrets.ts'
 import { settingsRoutes } from './routes/settings.ts'
+import { trashRoutes } from './routes/trash.ts'
 import type { SecretStore } from './secret-store.ts'
 import { BadRequestError, NotFoundError, type DataPaths } from './storage.ts'
 
@@ -48,11 +54,18 @@ export function createApp(
   app.use(secureHeaders(), csrf())
   app.use('/api/*', bodyLimit({ maxSize: config.maxBodyMB * 1024 * 1024 }))
 
-  app.route('/api/settings', settingsRoutes(paths))
+  app.route('/api/settings', settingsRoutes(library))
   app.route('/api/secrets', secretsRoutes(secrets))
-  app.route('/api/openrouter', openrouterRoutes(secrets))
+  app.route('/api/openrouter', openrouterRoutes(secrets, deps.fetch))
   app.route('/api/characters', charactersRoutes(library, paths.lorebooks))
-  app.route('/api/characters', chatsRoutes(deps))
+  app.route('/api/characters', chatsRoutes(deps, 'character'))
+  app.route('/api/groups', groupsRoutes(library))
+  app.route('/api/groups', chatsRoutes(deps, 'group'))
+  app.route('/api/chats', chatIndexRoutes(library))
+  app.route('/api/media', mediaRoutes(paths.media))
+  app.route('/api/profiles', profilesRoutes(library))
+  app.route('/api/trash', trashRoutes(library))
+  app.route('/api/backup', backupRoutes(paths))
   app.route('/api/personas', personasRoutes(library))
   app.route('/api/presets', collectionRoutes(library.presets))
   app.route('/api/lorebooks', collectionRoutes(library.lorebooks))
