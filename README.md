@@ -1,4 +1,4 @@
-# Moikatsu
+# Moikatsu (WIP)
 
 Self-hosted, open-source AI character chat. Supports Character Card V1/V2/V3 (PNG, JSON, CharX), Chat Completion presets, lorebooks, and JSONL chats. Uses OpenRouter for models.
 
@@ -12,8 +12,8 @@ Self-hosted, open-source AI character chat. Supports Character Card V1/V2/V3 (PN
 ## Install and run
 
 ```sh
-git clone <repo-url> moikatsu
-cd moikatsu
+git clone https://github.com/KidiXDev/Moikatsu
+cd Moikatsu
 bun install
 bun run build
 bun run start
