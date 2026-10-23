@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 
-import type { SecretStore } from '../secrets.ts'
+import type { SecretStore } from '../secret-store.ts'
 
 const API = 'https://openrouter.ai/api/v1'
 

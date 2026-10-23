@@ -4,7 +4,7 @@ import { serve } from '@hono/node-server'
 
 import { createApp } from './app.ts'
 import { loadConfig, projectRoot } from './config.ts'
-import { createSecretStore, loadOrCreateKey } from './secrets.ts'
+import { createSecretStore, loadOrCreateKey } from './secret-store.ts'
 import { ensureDataDirs, getDataPaths } from './storage.ts'
 
 const config = await loadConfig()

@@ -39,7 +39,7 @@ import type {
 import { normalizeLorebook } from '../engine/worldinfo/lorebook.ts'
 import type { NamedLorebook } from '../engine/worldinfo/scan.ts'
 import type { AppSettings, Library } from './library.ts'
-import type { SecretStore } from './secrets.ts'
+import type { SecretStore } from './secret-store.ts'
 import { BadRequestError } from './storage.ts'
 
 export interface GenerateRequest {

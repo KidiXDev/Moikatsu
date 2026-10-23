@@ -9,7 +9,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { parseCard, writeCardPng } from '../../engine/card/card.ts'
 import { createApp } from '../app.ts'
 import { parseConfig, projectRoot } from '../config.ts'
-import { createSecretStore } from '../secrets.ts'
+import { createSecretStore } from '../secret-store.ts'
 import { ensureDataDirs, getDataPaths } from '../storage.ts'
 
 const replies: string[][] = []

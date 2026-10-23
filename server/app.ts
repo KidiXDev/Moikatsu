@@ -20,7 +20,7 @@ import { openrouterRoutes } from './routes/openrouter.ts'
 import { personasRoutes } from './routes/personas.ts'
 import { secretsRoutes } from './routes/secrets.ts'
 import { settingsRoutes } from './routes/settings.ts'
-import type { SecretStore } from './secrets.ts'
+import type { SecretStore } from './secret-store.ts'
 import { BadRequestError, NotFoundError, type DataPaths } from './storage.ts'
 
 export interface AppOptions {

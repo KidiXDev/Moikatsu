@@ -8,7 +8,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 
 import { createApp } from '../app.ts'
 import { parseConfig } from '../config.ts'
-import { createSecretStore, loadOrCreateKey } from '../secrets.ts'
+import { createSecretStore, loadOrCreateKey } from '../secret-store.ts'
 import { ensureDataDirs, getDataPaths } from '../storage.ts'
 
 describe('parseConfig', () => {
